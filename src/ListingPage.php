@@ -185,7 +185,7 @@ class ListingPage extends \Page
                     $componentListingField->setSource($templates);
                     $componentListingField->setHasEmptyDefault(false);
 
-                    if (class_exists('KeyValueField')) {
+                    if (\class_exists(KeyValueField::class)) {
                         $fields->addFieldToTab(
                             'Root.ListingSettings',
                             KeyValueField::create('ComponentFilterWhere', 'Constrain Relation By', $componentFields)
