@@ -69,6 +69,8 @@ class ListingPageTest extends SapphireTest
         $record->CustomSort      = 'sort';
         $record->write();
 
+        $record->ListingItems();
+
         $this->assertEquals('Title', $record->CurrentSort);
         $this->assertEquals('ASC', $record->CurrentDir);
 
@@ -84,6 +86,8 @@ class ListingPageTest extends SapphireTest
 
         $controller->setRequest($req);
         $controller->pushCurrent();
+
+        $record->ListingItems();
 
         $this->assertEquals('ID', $record->CurrentSort);
         $this->assertEquals('DESC', $record->CurrentDir);
