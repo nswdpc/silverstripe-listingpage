@@ -2,13 +2,12 @@
 
 namespace Symbiote\ListingPage;
 
-use PageController;
 use SilverStripe\Control\HTTPRequest;
 
 /**
  * @extends \PageController<\Page>
  */
-class ListingPageController extends PageController
+class ListingPageController extends \PageController
 {
     private static array $url_handlers = [
         '$Action' => 'index'

@@ -2,7 +2,6 @@
 
 namespace Symbiote\ListingPage\Tests;
 
-use Page;
 use Symbiote\ListingPage\ListingTemplate;
 use Symbiote\ListingPage\ListingPage;
 use Symbiote\Multisites\Multisites;
@@ -65,7 +64,7 @@ HTML;
         $record->ListingSourceID = $parentId; // List everything under 'Site' / root
         $record->SortBy   = 'Title';
         $record->SortDir  = 'Ascending';
-        $record->ListType = Page::class;
+        $record->ListType = \Page::class;
         $record->ListingTemplateID = $templateRecord->ID;
         $record->ComponentListingTemplateID = $templateRecord->ID;
         $record->ComponentFilterName = 'ViewerGroups'; // Magic method on SiteTree, from "InheritedPermissionsExtension" many_many.

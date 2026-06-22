@@ -2,7 +2,6 @@
 
 namespace Symbiote\ListingPage;
 
-use Page;
 use SilverStripe\Assets\Folder;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\ClassInfo;
@@ -50,7 +49,7 @@ use SilverStripe\View\ViewLayerData;
  * @method \Symbiote\ListingPage\ListingTemplate ListingTemplate()
  * @method \Symbiote\ListingPage\ListingTemplate ComponentListingTemplate()
  */
-class ListingPage extends Page
+class ListingPage extends \Page
 {
     private static string $table_name = 'ListingPage';
 
@@ -81,7 +80,7 @@ class ListingPage extends Page
     ];
 
     private static array $defaults = [
-        'ListType'                  => Page::class,
+        'ListType'                  => \Page::class,
         'PerPage'                   => 10
     ];
 
@@ -110,7 +109,7 @@ class ListingPage extends Page
         $fields->addFieldToTab('Root.ListingSettings', NumericField::create('PerPage', _t('ListingPage.PER_PAGE', 'Items Per Page')));
         $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('SortDir', _t('ListingPage.SORT_DIR', 'Sort Direction'), $this->dbObject('SortDir')->enumValues()));
 
-        $listType = $this->ListType ?: Page::class;
+        $listType = $this->ListType ?: \Page::class;
         $objFields = $this->getSelectableFields($listType);
 
         $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('SortBy', _t('ListingPage.SORT_BY', 'Sort By'), $objFields));
@@ -285,7 +284,7 @@ class ListingPage extends Page
      */
     protected function effectiveSourceType()
     {
-        $listType = $this->ListType ?: Page::class;
+        $listType = $this->ListType ?: \Page::class;
         $listTypeSourceMap = $this->config()->get('listing_type_source_map');
         return $listTypeSourceMap[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
     }
