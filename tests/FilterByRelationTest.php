@@ -79,7 +79,8 @@ HTML;
 
         $response = $this->get('listingpage-relation-test');
         $this->assertEquals('200', $response->getStatusCode(), 'Expected "listingpage-relation-test" to get 200 OK');
-        $response = $this->get('listingpage-relation-test/' . $adminGroups[0]->Code, 'Expected "listingpage-relation-test/' . $adminGroups[0]->Code . '" to get 200 OK');
+        $response = $this->get('listingpage-relation-test/' . $adminGroups[0]->Code);
+        // 'Expected "listingpage-relation-test/' . $adminGroups[0]->Code . '" to get 200 OK');
         $this->assertEquals('200', $response->getStatusCode());
         $expectedValue = <<<HTML
 <div class="listing-page-template">

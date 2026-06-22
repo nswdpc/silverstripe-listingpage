@@ -17,7 +17,7 @@ class ListingPageController extends PageController
         $action = $request->latestParam('Action');
         if ($action &&
             $this->hasMethod($action) &&
-            in_array($action, $this->config()->allowed_actions)) {
+            in_array($action, $this->config()->get('allowed_actions'))) {
             return $this->$action();
         }
         if ($this->data()->ContentType ||

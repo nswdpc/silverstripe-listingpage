@@ -74,7 +74,7 @@ class ListingPageTest extends SapphireTest
         $this->assertEquals('Title', $record->CurrentSort);
         $this->assertEquals('ASC', $record->CurrentDir);
 
-        $controller = new Controller;
+        $controller = Controller::create();
 
         $params = [
             'sort' => 'ID',

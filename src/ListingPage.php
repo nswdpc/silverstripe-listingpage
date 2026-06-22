@@ -6,7 +6,7 @@ use Page;
 use SilverStripe\Assets\Folder;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\ClassInfo;
-use SilverStripe\Forms\HTMLEditor\HtmlEditorField;
+use SilverStripe\Forms\HTMLEditor\HTMLEditorField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\NumericField;
 use SilverStripe\Forms\CheckboxField;
@@ -18,8 +18,9 @@ use Symbiote\MultiValueField\ORM\FieldType\MultiValueField;
 use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\ArrayList;
-use SilverStripe\ORM\PaginatedList;
+use SilverStripe\Model\List\ArrayList;
+use SilverStripe\Model\List\PaginatedList;
+use SilverStripe\Model\List\SS_List;
 use SilverStripe\View\SSViewer;
 
 /**
@@ -209,10 +210,8 @@ class ListingPage extends Page
 
     /**
      * Some subclasses will want to override this.
-     *
-     * @return DataObject
      */
-    protected function getListingSource()
+    protected function getListingSource(): ?DataObject
     {
         $sourceType = $this->effectiveSourceType();
         if ($sourceType && $this->ListingSourceID) {
@@ -223,7 +222,8 @@ class ListingPage extends Page
 
             $newParentId = 0;
             if ($this->AllowDrilldown) {
-                $newParentId = Controller::has_curr() ? (int) Controller::curr()->getRequest()->param('Action') : 0;
+                $controller = Controller::curr();
+                $newParentId = $controller ? (int) $controller->getRequest()->param('Action') : 0;
             }
 
             if ($newParentId) {
@@ -252,6 +252,7 @@ class ListingPage extends Page
                 return $source;
             }
         }
+        return null;
     }
 
     /**
@@ -264,7 +265,8 @@ class ListingPage extends Page
     protected function effectiveSourceType()
     {
         $listType = $this->ListType ?: Page::class;
-        $listType = $this->config()->listing_type_source_map[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
+        $listTypeSourceMap = $this->config()->get('listing_type_source_map');
+        $listType = $listTypeSourceMap[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
         return $listType;
     }
 
@@ -278,7 +280,7 @@ class ListingPage extends Page
         $manyMany = singleton($this->ListType)->config()->many_many;
         $tagClass = $manyMany[$this->ComponentFilterName] ?? '';
         if (!$tagClass) {
-            return new ArrayList();
+            return ArrayList::create();
         }
         $result = DataList::create($tagClass);
         if ($this->ComponentFilterWhere
@@ -320,7 +322,8 @@ class ListingPage extends Page
 
         $sortDir = $this->SortDir == 'Ascending' ? 'ASC' : 'DESC';
         $sort = $this->SortBy && isset($objFields[$this->SortBy]) ? $this->SortBy : 'Title';
-        $req = Controller::has_curr() ? Controller::curr()->getRequest() : null;
+        $controller = Controller::curr();
+        $req = $controller ? $controller->getRequest() : null;
 
         if (strlen($this->CustomSort ?? '') && $req) {
             $sortField = $req->getVar($this->CustomSort);
@@ -354,7 +357,7 @@ class ListingPage extends Page
             $items  = $items->limit($this->PerPage, $page);
         }
         if ($this->ComponentFilterName) {
-            $controller = (Controller::has_curr()) ? Controller::curr() : null;
+            $controller = Controller::curr();
             $tags = [];
             if ($controller && $controller instanceof ListingPageController) {
                 $tagName = urldecode((string) $controller->getRequest()->latestParam('Action'));
@@ -378,18 +381,20 @@ class ListingPage extends Page
                     $this->ComponentFilterName . '.ID' => $tags
                 ]);
             } else {
-                $tags = new ArrayList();
+                $tags = ArrayList::create();
             }
         }
 
         $this->extend('updateListingItems', $items);
 
         $newList = ArrayList::create();
+        // @phpstan-ignore if.alwaysTrue
         if ($items) {
             $newList = PaginatedList::create($items);
             // ensure the 0 limit is applied if configured as such
             $newList->setPageLength($this->PerPage);
             $newList->setPaginationGetVar($pageUrlVar);
+            // @phpstan-ignore instanceof.alwaysTrue
             if ($items instanceof DataList) {
                 $newList->setPaginationFromQuery($items->dataQuery()->query());
             }
@@ -410,11 +415,14 @@ class ListingPage extends Page
             return;
         }
         $ids = [];
-        foreach ($parent->Children() as $kid) {
-            $ids[] = $kid->ID;
-            $childIds = $this->getIdsFrom($kid, $depth + 1);
-            if ($childIds) {
-                $ids = array_merge($ids, $childIds);
+        // @phpstan-ignore method.notFound
+        if($children = $parent->Children()) {
+            foreach ($children as $kid) {
+                $ids[] = $kid->ID;
+                $childIds = $this->getIdsFrom($kid, $depth + 1);
+                if ($childIds) {
+                    $ids = array_merge($ids, $childIds);
+                }
             }
         }
         return $ids;
@@ -425,7 +433,9 @@ class ListingPage extends Page
         if (!$this->ID) {
             return '';
         }
-        $action = (Controller::has_curr()) ? Controller::curr()->getRequest()->latestParam('Action') : null;
+
+        $controller = Controller::curr();
+        $action = ($controller ? $controller->getRequest()->latestParam('Action') : null);
 
         if ($this->ComponentFilterName && !$action) {
             // For a list of relations like tags/categories/etc
