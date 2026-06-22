@@ -30,18 +30,37 @@ use SilverStripe\View\ViewLayerData;
  *
  * @author  Marcus Nyeholt <marcus@silverstripe.com.au>
  * @license BSD License http://silverstripe.org/bsd-license/
+ * @property int $PerPage
+ * @property ?string $Style
+ * @property ?string $SortBy
+ * @property ?string $CustomSort
+ * @property ?string $SortDir
+ * @property ?string $ListType
+ * @property int $ListingSourceID
+ * @property int $Depth
+ * @property bool $StrictType
+ * @property bool $AllowDrilldown
+ * @property ?string $ContentType
+ * @property ?string $CustomContentType
+ * @property ?string $ComponentFilterName
+ * @property ?string $ComponentFilterColumn
+ * @property mixed $ComponentFilterWhere
+ * @property int $ListingTemplateID
+ * @property int $ComponentListingTemplateID
+ * @method \Symbiote\ListingPage\ListingTemplate ListingTemplate()
+ * @method \Symbiote\ListingPage\ListingTemplate ComponentListingTemplate()
  */
 class ListingPage extends Page
 {
-    private static $table_name = 'ListingPage';
+    private static string $table_name = 'ListingPage';
 
-    private static $db = [
+    private static array $db = [
         'PerPage'                   => 'Int',
         'Style'                     => "Enum('Standard,A to Z')",
         'SortBy'                    => "Varchar(64)",
         'CustomSort'                => 'Varchar(64)',
         'SortDir'                   => "Enum('Ascending,Descending')",
-        'ListType'                  => 'DBClassName(\'' . DataObject::class . '\', [\'index\' => false])',
+        'ListType'                  => "DBClassName('" . DataObject::class . "', ['index' => false])",
         'ListingSourceID'           => 'Int',
         'Depth'                     => 'Int',
         'StrictType'                => 'Boolean',
@@ -56,12 +75,12 @@ class ListingPage extends Page
         'ComponentFilterWhere'      => MultiValueField::class
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'ListingTemplate'           => ListingTemplate::class,
         'ComponentListingTemplate'  => ListingTemplate::class,
     ];
 
-    private static $defaults = [
+    private static array $defaults = [
         'ListType'                  => Page::class,
         'PerPage'                   => 10
     ];
@@ -69,15 +88,14 @@ class ListingPage extends Page
     /**
      * A mapping between ListType selected and the type of items that should be shown in the "Source"
      * selection tree. If not specified in this mapping, it is assumed to be 'Page'.
-     *
-     * @var array
      */
-    private static $listing_type_source_map = [
+    private static array $listing_type_source_map = [
         'Folder'    => Folder::class
     ];
 
-    private static $icon_class = 'font-icon-p-list';
+    private static string $cms_icon_class = 'font-icon-p-list';
 
+    #[\Override]
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
@@ -86,11 +104,7 @@ class ListingPage extends Page
         $fields->replaceField('Content', HtmlEditorField::create('Content', _t('ListingPage.CONTENT', 'Content (enter $Listing to display the listing)')));
 
         $templates = DataObject::get(ListingTemplate::class);
-        if ($templates) {
-            $templates = $templates->map();
-        } else {
-            $templates = [];
-        }
+        $templates = $templates ? $templates->map() : [];
 
         $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('ListingTemplateID', _t('ListingPage.CONTENT_TEMPLATE', 'Listing Template'), $templates));
         $fields->addFieldToTab('Root.ListingSettings', NumericField::create('PerPage', _t('ListingPage.PER_PAGE', 'Items Per Page')));
@@ -137,16 +151,19 @@ class ListingPage extends Page
             if (!is_array($componentsManyMany)) {
                 $componentsManyMany = [];
             }
+
             $componentNames = [];
             foreach ($componentsManyMany as $componentName => $componentVal) {
                 $componentClass = '';
                 if (is_string($componentVal)) {
-                    $componentClass = " ($componentVal)";
+                    $componentClass = " ({$componentVal})";
                 } elseif (is_array($componentVal) && isset($componentVal['through'])) {
                     $componentClass = " ({$componentVal['through']})";
                 }
+
                 $componentNames[$componentName] = FormField::name_to_label($componentName) . $componentClass;
             }
+
             $fields->addFieldToTab(
                 'Root.ListingSettings',
                 DropdownField::create('ComponentFilterName', _t('ListingPage.RELATION_COMPONENT_NAME', 'Filter by Relation'), $componentNames)
@@ -162,6 +179,7 @@ class ListingPage extends Page
                     foreach ($this->getSelectableFields($componentClass) as $columnName => $type) {
                         $componentFields[$columnName] = $columnName;
                     }
+
                     $componentColumnField->setSource($componentFields);
                     $componentColumnField->setEmptyString('(Select)');
 
@@ -202,6 +220,7 @@ class ListingPage extends Page
      * When saving, check to see whether we should delete the
      * listing source ID
      */
+    #[\Override]
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
@@ -228,24 +247,23 @@ class ListingPage extends Page
                 $newParentId = $controller ? (int) $controller->getRequest()->param('Action') : 0;
             }
 
-            if ($newParentId) {
-                /* @var $source DataObject */
-                if ($source) {
-                    $newParent = $sourceType::get()->byId($newParentId);
-                    if ($newParent) {
-                        // figure out whether it's within the source already configured there by looking up through the
-                        // tree until we find the listing source ID parent, at which point we can
-                        // safely swap to it
-                        //
-                        // - nyeholt 2017-12-18
-                        $parentCheck = $newParent;
-                        while ($parentCheck) {
-                            if ($parentCheck->ID == $source->ID) {
-                                $source = $newParent;
-                                break;
-                            }
-                            $parentCheck = $parentCheck->Parent();
+            /* @var $source DataObject */
+            if ($newParentId && $source) {
+                $newParent = $sourceType::get()->byId($newParentId);
+                if ($newParent) {
+                    // figure out whether it's within the source already configured there by looking up through the
+                    // tree until we find the listing source ID parent, at which point we can
+                    // safely swap to it
+                    //
+                    // - nyeholt 2017-12-18
+                    $parentCheck = $newParent;
+                    while ($parentCheck) {
+                        if ($parentCheck->ID == $source->ID) {
+                            $source = $newParent;
+                            break;
                         }
+
+                        $parentCheck = $parentCheck->Parent();
                     }
                 }
             }
@@ -254,6 +272,7 @@ class ListingPage extends Page
                 return $source;
             }
         }
+
         return null;
     }
 
@@ -268,8 +287,7 @@ class ListingPage extends Page
     {
         $listType = $this->ListType ?: Page::class;
         $listTypeSourceMap = $this->config()->get('listing_type_source_map');
-        $listType = $listTypeSourceMap[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
-        return $listType;
+        return $listTypeSourceMap[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
     }
 
     /**
@@ -284,12 +302,14 @@ class ListingPage extends Page
         if (!$tagClass) {
             return ArrayList::create();
         }
+
         $result = DataList::create($tagClass);
         if ($this->ComponentFilterWhere
             && ($componentWhereFilters = $this->ComponentFilterWhere->getValue())
         ) {
             $result = $result->filter($componentWhereFilters);
         }
+
         return $result;
     }
 
@@ -309,7 +329,7 @@ class ListingPage extends Page
 
         $objFields = $this->getSelectableFields($listType);
 
-        if ($source) {
+        if ($source instanceof \SilverStripe\ORM\DataObject) {
             $ids = $this->getIdsFrom($source, 1);
             $ids[] = $source->ID;
 
@@ -348,8 +368,6 @@ class ListingPage extends Page
         // $sort = $this->CustomSort ? $this->CustomSort : $sort;
         $sort .= ' ' . $sortDir;
 
-        $limit = '';
-
         $pageUrlVar = 'page' . $this->ID;
 
         $items = DataList::create($listType)->filter($filter)->sort($sort);
@@ -358,6 +376,7 @@ class ListingPage extends Page
             $page = isset($_REQUEST[$pageUrlVar]) ? (int) $_REQUEST[$pageUrlVar] : 0;
             $items  = $items->limit($this->PerPage, $page);
         }
+
         if ($this->ComponentFilterName) {
             $controller = Controller::curr();
             $tags = [];
@@ -397,9 +416,7 @@ class ListingPage extends Page
             $newList->setPageLength($this->PerPage);
             $newList->setPaginationGetVar($pageUrlVar);
             // @phpstan-ignore instanceof.alwaysTrue
-            if ($items instanceof DataList) {
-                $newList->setPaginationFromQuery($items->dataQuery()->query());
-            }
+            $newList->setPaginationFromQuery($items->dataQuery()->query());
         }
 
         return $newList;
@@ -411,11 +428,12 @@ class ListingPage extends Page
      * @param DataObject $parent
      * @param int        $depth
      */
-    protected function getIdsFrom($parent, $depth)
+    protected function getIdsFrom($parent, $depth): ?array
     {
         if ($depth >= $this->Depth) {
-            return;
+            return null;
         }
+
         $ids = [];
         // @phpstan-ignore method.notFound
         if($children = $parent->Children()) {
@@ -427,10 +445,11 @@ class ListingPage extends Page
                 }
             }
         }
+
         return $ids;
     }
 
-    public function Content()
+    public function Content(): string
     {
         if (!$this->ID) {
             return '';
@@ -449,6 +468,7 @@ class ListingPage extends Page
             $items = $this->ListingItems();
             $view = $engine->renderString($this->ListingTemplate()->ItemTemplate, ViewLayerData::create(['Items' => $items]));
         }
+
         $content = str_replace('<p>$Listing</p>', '$Listing', $this->Content);
         return str_replace('$Listing', $view, $content);
     }

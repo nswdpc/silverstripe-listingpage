@@ -29,7 +29,7 @@ class FilterByRelationTest extends FunctionalTest
      * https://github.com/nyeholt/silverstripe-listingpage/issues/19
      *
      */
-    public function testFilterByRelation()
+    public function testFilterByRelation(): void
     {
         $this->logInWithPermission('ADMIN');
 
@@ -100,8 +100,8 @@ HTML;
     /**
      * Taken from "framework\tests\view\SSViewerTest.php"
      */
-    protected function assertEqualIgnoringWhitespace($a, $b, $message = '')
+    protected function assertEqualIgnoringWhitespace($a, $b, string $message = '')
     {
-        $this->assertEquals(preg_replace('/\s+/', '', $a), preg_replace('/\s+/', '', $b), $message);
+        $this->assertEquals(preg_replace('/\s+/', '', (string) $a), preg_replace('/\s+/', '', (string) $b), $message);
     }
 }

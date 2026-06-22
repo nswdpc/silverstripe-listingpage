@@ -19,16 +19,18 @@ class ListingPageTest extends SapphireTest
      *
      * @return array
      */
+    #[\Override]
     public static function getExtraDataObjects()
     {
         $objects = static::$extra_dataobjects;
         if (class_exists(TestPage::class)) {
             $objects[] = TestPage::class;
         }
+
         return $objects;
     }
 
-    public function testPublish()
+    public function testPublish(): void
     {
         $this->logInWithPermission('ADMIN');
 
@@ -49,7 +51,7 @@ class ListingPageTest extends SapphireTest
         );
     }
 
-    public function testCustomisedSort()
+    public function testCustomisedSort(): void
     {
         $this->logInWithPermission('ADMIN');
 
@@ -69,8 +71,6 @@ class ListingPageTest extends SapphireTest
         $record->CustomSort      = 'sort';
         $record->write();
 
-        $items = $record->ListingItems();
-
         $this->assertEquals('Title', $record->CurrentSort);
         $this->assertEquals('ASC', $record->CurrentDir);
 
@@ -83,9 +83,9 @@ class ListingPageTest extends SapphireTest
 
         $req   = new HTTPRequest('GET', 'dummy/url', $params);
         $req->setSession(Controller::curr()->getRequest()->getSession());
+
         $controller->setRequest($req);
         $controller->pushCurrent();
-        $items = $record->ListingItems();
 
         $this->assertEquals('ID', $record->CurrentSort);
         $this->assertEquals('DESC', $record->CurrentDir);

@@ -5,9 +5,12 @@ namespace Symbiote\ListingPage;
 use PageController;
 use SilverStripe\Control\HTTPRequest;
 
+/**
+ * @extends \PageController<\Page>
+ */
 class ListingPageController extends PageController
 {
-    private static $url_handlers = [
+    private static array $url_handlers = [
         '$Action' => 'index'
     ];
 
@@ -20,6 +23,7 @@ class ListingPageController extends PageController
             in_array($action, $this->config()->get('allowed_actions'))) {
             return $this->$action();
         }
+
         if ($this->data()->ContentType ||
             $this->data()->CustomContentType) {
             // k, not doing it in the theme...
@@ -28,6 +32,7 @@ class ListingPageController extends PageController
 
             return $this->data()->Content();
         }
+
         return [];
     }
 }
