@@ -48,7 +48,7 @@ class ListingPageTest extends SapphireTest
         $this->assertTrue($record->publishRecursive());
         $this->assertEquals(
             'Listing Page Test',
-            DB::prepared_query("SELECT \"Title\" FROM \"SiteTree_Live\" WHERE \"ID\" = ?", [$record->ID])->value()
+            DB::prepared_query('SELECT "Title" FROM "SiteTree_Live" WHERE "ID" = ?', [$record->ID])->value()
         );
     }
 
