@@ -171,6 +171,7 @@ class ListingPage extends \Page
             );
             $fields->addFieldToTab('Root.ListingSettings', $componentColumnField = DropdownField::create('ComponentFilterColumn', 'Filter by Relation Field')->setEmptyString('(Must select a relation and save)'));
             $fields->addFieldToTab('Root.ListingSettings', $componentListingField = DropdownField::create('ComponentListingTemplateID', _t('ListingPage.COMPONENT_CONTENT_TEMPLATE', 'Relation Listing Template'))->setEmptyString('(Must select a relation and save)'));
+            $fields->removeByName(['ComponentFilterWhere']);
             if ($this->ComponentFilterName) {
                 $componentClass = $componentsManyMany[$this->ComponentFilterName] ?? '';
                 if ($componentClass) {
@@ -185,13 +186,14 @@ class ListingPage extends \Page
                     $componentListingField->setSource($templates);
                     $componentListingField->setHasEmptyDefault(false);
 
-                    if (\class_exists(KeyValueField::class)) {
-                        $fields->addFieldToTab(
-                            'Root.ListingSettings',
-                            KeyValueField::create('ComponentFilterWhere', 'Constrain Relation By', $componentFields)
-                                ->setRightTitle("Filter '{$this->ComponentFilterName}' with these properties.")
-                        );
-                    }
+                    $fields->insertAfter(
+                        'ComponentFilterName',
+                        KeyValueField::create(
+                            'ComponentFilterWhere',
+                            'Constrain Relation By',
+                            $componentFields
+                        )->setRightTitle("Filter '{$this->ComponentFilterName}' with these properties.")
+                    );
                 }
             }
         }
