@@ -100,39 +100,114 @@ class ListingPage extends \Page
         $fields = parent::getCMSFields();
         /* @var FieldSet $fields */
 
+        // remove unused fields
+        $fields->removeByName(['Style']);
+
         $fields->replaceField('Content', HtmlEditorField::create('Content', _t('ListingPage.CONTENT', 'Content (enter $Listing to display the listing)')));
 
         $templates = DataObject::get(ListingTemplate::class);
         $templates = $templates ? $templates->map() : [];
 
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('ListingTemplateID', _t('ListingPage.CONTENT_TEMPLATE', 'Listing Template'), $templates));
-        $fields->addFieldToTab('Root.ListingSettings', NumericField::create('PerPage', _t('ListingPage.PER_PAGE', 'Items Per Page')));
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('SortDir', _t('ListingPage.SORT_DIR', 'Sort Direction'), $this->dbObject('SortDir')->enumValues()));
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'ListingTemplateID',
+                _t('ListingPage.CONTENT_TEMPLATE', 'Listing Template'),
+                $templates
+            )->setEmptyString('(Select)')
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            NumericField::create(
+                'PerPage',
+                _t('ListingPage.PER_PAGE', 'Items Per Page')
+            )
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'SortDir',
+                _t('ListingPage.SORT_DIR', 'Sort Direction'),
+                $this->dbObject('SortDir')->enumValues()
+            )
+        );
 
         $listType = $this->ListType ?: \Page::class;
         $objFields = $this->getSelectableFields($listType);
 
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('SortBy', _t('ListingPage.SORT_BY', 'Sort By'), $objFields));
-        $fields->addFieldToTab('Root.ListingSettings', $custSort = TextField::create('CustomSort', _t('ListingPage.CUSTOM_SORT', 'Custom sort GET parameter name')));
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'SortBy',
+                _t('ListingPage.SORT_BY', 'Sort By'),
+                $objFields
+            )
+        );
 
-        $custSort->setRightTitle('If set, add this as a URL param to sort the view. Will also look for {name}_dir as the sort direction');
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            TextField::create(
+                'CustomSort',
+                _t('ListingPage.CUSTOM_SORT', 'Custom sort GET parameter name')
+            )->setRightTitle(
+                'If set, add this as a URL param to sort the view. Will also look for {name}_dir as the sort direction'
+            )
+        );
 
         $types = ClassInfo::subclassesFor(DataObject::class);
         array_shift($types);
         $source = array_combine($types, $types);
         asort($source);
 
-        $optionsetField = DropdownField::create('ListType', _t('ListingPage.PAGE_TYPE', 'List items of type'), $source, 'Any');
-        $fields->addFieldToTab('Root.ListingSettings', $optionsetField);
-        $fields->addFieldToTab('Root.ListingSettings', CheckboxField::create('StrictType', _t('ListingPage.STRICT_TYPE', 'List JUST this type, not descendents')));
+        $optionsetField = DropdownField::create(
+            'ListType',
+            _t('ListingPage.PAGE_TYPE', 'List items of type'),
+            $source
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            $optionsetField
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            CheckboxField::create(
+                'StrictType',
+                _t('ListingPage.STRICT_TYPE', 'List JUST this type, not descendents')
+            )
+        );
 
         $sourceType = $this->effectiveSourceType();
         $parentType = $this->parentType($sourceType);
         if ($sourceType && $parentType) {
-            $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('Depth', _t('ListingPage.DEPTH', 'Depth'), [1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5]));
-            $fields->addFieldToTab('Root.ListingSettings', TreeDropdownField::create('ListingSourceID', _t('ListingPage.LISTING_SOURCE', 'Source of content for listing'), $parentType));
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                DropdownField::create(
+                    'Depth',
+                    _t('ListingPage.DEPTH', 'Depth'),
+                    [1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5]
+                )
+            );
 
-            $fields->addFieldToTab('Root.ListingSettings', CheckboxField::create('AllowDrilldown', _t('ListingPage.ALLOW_DRILLDOWN', 'Allow request action to provide substitute parent ID, eg /page-url/43')));
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                TreeDropdownField::create(
+                    'ListingSourceID',
+                    _t('ListingPage.LISTING_SOURCE', 'Source of content for listing'),
+                    $parentType
+                )
+            );
+
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                CheckboxField::create(
+                    'AllowDrilldown',
+                    _t('ListingPage.ALLOW_DRILLDOWN', 'Allow request action to provide substitute parent ID, eg /page-url/43')
+                )
+            );
         }
 
         $contentTypes = [
@@ -142,8 +217,23 @@ class ListingPage extends \Page
             'application/rdf+xml; charset=utf-8'    => 'RDF (xml)',
             'application/atom+xml; charset=utf-8'   => 'ATOM (xml)',
         ];
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('ContentType', _t('ListingPage.CONTENT_TYPE', 'Content Type'), $contentTypes)->setEmptyString('In Theme'));
-        $fields->addFieldToTab('Root.ListingSettings', TextField::create('CustomContentType', _t('ListingPage.CUSTOM_CONTENT_TYPE', 'Custom Content Type')));
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'ContentType',
+                _t('ListingPage.CONTENT_TYPE', 'Content Type'),
+                $contentTypes
+            )->setEmptyString('In Theme')
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            TextField::create(
+                'CustomContentType',
+                _t('ListingPage.CUSTOM_CONTENT_TYPE', 'Custom Content Type')
+            )
+        );
 
         if ($this->ListType) {
             $componentsManyMany = singleton($this->ListType)->config()->many_many;
@@ -165,13 +255,30 @@ class ListingPage extends \Page
 
             $fields->addFieldToTab(
                 'Root.ListingSettings',
-                DropdownField::create('ComponentFilterName', _t('ListingPage.RELATION_COMPONENT_NAME', 'Filter by Relation'), $componentNames)
-                ->setEmptyString('(Select)')
+                DropdownField::create(
+                    'ComponentFilterName',
+                    _t('ListingPage.RELATION_COMPONENT_NAME', 'Filter by Relation'),
+                    $componentNames
+                )->setEmptyString('(Select)')
                 ->setDescription('Will cause this page to list items based on the last URL part. (ie. ' . $this->AbsoluteLink() . '{$componentFieldName})')
             );
-            $fields->addFieldToTab('Root.ListingSettings', $componentColumnField = DropdownField::create('ComponentFilterColumn', 'Filter by Relation Field')->setEmptyString('(Must select a relation and save)'));
-            $fields->addFieldToTab('Root.ListingSettings', $componentListingField = DropdownField::create('ComponentListingTemplateID', _t('ListingPage.COMPONENT_CONTENT_TEMPLATE', 'Relation Listing Template'))->setEmptyString('(Must select a relation and save)'));
+
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                $componentColumnField = DropdownField::create(
+                    'ComponentFilterColumn',
+                    'Filter by Relation Field'
+                )->setEmptyString('(Must select a relation and save)')
+            );
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                $componentListingField = DropdownField::create(
+                    'ComponentListingTemplateID',
+                    _t('ListingPage.COMPONENT_CONTENT_TEMPLATE', 'Relation Listing Template')
+                )->setEmptyString('(Must select a relation and save)')
+            );
             $fields->removeByName(['ComponentFilterWhere']);
+
             if ($this->ComponentFilterName) {
                 $componentClass = $componentsManyMany[$this->ComponentFilterName] ?? '';
                 if ($componentClass) {
