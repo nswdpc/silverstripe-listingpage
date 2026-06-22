@@ -12,7 +12,6 @@ use SilverStripe\ORM\DB;
 
 class ListingPageTest extends SapphireTest
 {
-
     protected $usesDatabase = true;
 
     /**
