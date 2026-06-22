@@ -12,6 +12,9 @@ use SilverStripe\ORM\DB;
 
 class ListingPageTest extends SapphireTest
 {
+
+    protected $usesDatabase = true;
+
     /**
      * The elemental extension may be applied, meaning we need to ensure this is loaded.
      *
