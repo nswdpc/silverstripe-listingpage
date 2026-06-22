@@ -23,13 +23,12 @@ class ListingPageController extends \PageController
             return $this->$action();
         }
 
-        if ($this->data()->ContentType ||
-            $this->data()->CustomContentType) {
+        $listingPage = $this->data();
+        if($listingPage instanceof ListingPage && ($listingPage->ContentType || $listingPage->CustomContentType)) {
             // k, not doing it in the theme...
-            $contentType = $this->data()->ContentType ?: $this->data()->CustomContentType;
+            $contentType = $listingPage->ContentType ?: $listingPage->CustomContentType;
             $this->response->addHeader('Content-type', $contentType);
-
-            return $this->data()->Content();
+            return $listingPage->Content();
         }
 
         return [];
