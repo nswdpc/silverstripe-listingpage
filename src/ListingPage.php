@@ -3,6 +3,7 @@
 namespace Symbiote\ListingPage;
 
 use Page;
+use SilverStripe\Assets\Folder;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Forms\HTMLEditor\HtmlEditorField;
