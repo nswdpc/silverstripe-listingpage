@@ -10,7 +10,7 @@
         </exclude>
     </coverage>
     <testsuites>
-        <testsuite name="Default">
+        <testsuite name="symbiote/silverstripe-listingpage">
             <directory>tests</directory>
         </testsuite>
     </testsuites>
