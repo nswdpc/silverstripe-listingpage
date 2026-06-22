@@ -462,10 +462,18 @@ class ListingPage extends \Page
         if ($this->ComponentFilterName && !$action) {
             // For a list of relations like tags/categories/etc
             $items = $this->ComponentListingItems();
-            $view = $engine->renderString($this->ComponentListingTemplate()->ItemTemplate, ViewLayerData::create(['Items' => $items]));
+            $listingtemplate = $this->ComponentListingTemplate();
+            $itemTemplate = $listingtemplate ? $listingtemplate->ItemTemplate : '';
+            if($itemTemplate) {
+                $view = $engine->renderString($itemTemplate, ViewLayerData::create(['Items' => $items]));
+            }
         } else {
             $items = $this->ListingItems();
-            $view = $engine->renderString($this->ListingTemplate()->ItemTemplate, ViewLayerData::create(['Items' => $items]));
+            $listingtemplate = $this->ListingTemplate();
+            $itemTemplate = $listingtemplate ? $listingtemplate->ItemTemplate : '';
+            if($itemTemplate) {
+                $view = $engine->renderString($itemTemplate, ViewLayerData::create(['Items' => $items]));
+            }
         }
 
         $content = str_replace('<p>$Listing</p>', '$Listing', $this->Content);
