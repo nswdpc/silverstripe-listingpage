@@ -436,7 +436,7 @@ class ListingPage extends Page
 
         $ids = [];
         // @phpstan-ignore method.notFound
-        if($children = $parent->Children()) {
+        if ($children = $parent->Children()) {
             foreach ($children as $kid) {
                 $ids[] = $kid->ID;
                 $childIds = $this->getIdsFrom($kid, $depth + 1);

@@ -6,9 +6,6 @@ use Page;
 use Symbiote\ListingPage\ListingTemplate;
 use Symbiote\ListingPage\ListingPage;
 use Symbiote\Multisites\Multisites;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\DB;
 use SilverStripe\Security\Permission;
 use SilverStripe\Dev\FunctionalTest;
 

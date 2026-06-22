@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Symbiote\ListingPage;
 
 use SilverStripe\Admin\ModelAdmin;
-use Symbiote\ListingPage\ListingTemplate;
 
 /**
  * Description of ListingAdmin

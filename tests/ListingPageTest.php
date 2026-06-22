@@ -2,12 +2,10 @@
 
 namespace Symbiote\ListingPage\Tests;
 
-use Page;
 use DNADesign\Elemental\Tests\Src\TestPage;
 use Symbiote\Multisites\Multisites;
 use Symbiote\ListingPage\ListingPage;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DB;
