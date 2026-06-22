@@ -16,12 +16,14 @@ use SilverStripe\Forms\FormField;
 use Symbiote\MultiValueField\Fields\KeyValueField;
 use Symbiote\MultiValueField\ORM\FieldType\MultiValueField;
 use SilverStripe\Control\Controller;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataList;
 use SilverStripe\Model\List\ArrayList;
 use SilverStripe\Model\List\PaginatedList;
 use SilverStripe\Model\List\SS_List;
-use SilverStripe\View\SSViewer;
+use SilverStripe\View\TemplateEngine;
+use SilverStripe\View\ViewLayerData;
 
 /**
  * A page that can be configured to create listings of other content
@@ -437,17 +439,17 @@ class ListingPage extends Page
         $controller = Controller::curr();
         $action = ($controller ? $controller->getRequest()->latestParam('Action') : null);
 
+        $engine = Injector::inst()->create(TemplateEngine::class);
+        $view = '';
         if ($this->ComponentFilterName && !$action) {
             // For a list of relations like tags/categories/etc
             $items = $this->ComponentListingItems();
-            $item = $this->customise(['Items' => $items]);
-            $view = SSViewer::fromString($this->ComponentListingTemplate()->ItemTemplate);
+            $view = $engine->renderString($this->ComponentListingTemplate()->ItemTemplate, ViewLayerData::create(['Items' => $items]));
         } else {
             $items = $this->ListingItems();
-            $item = $this->customise(['Items' => $items]);
-            $view = SSViewer::fromString($this->ListingTemplate()->ItemTemplate);
+            $view = $engine->renderString($this->ListingTemplate()->ItemTemplate, ViewLayerData::create(['Items' => $items]));
         }
         $content = str_replace('<p>$Listing</p>', '$Listing', $this->Content);
-        return str_replace('$Listing', $view->process($item), $content);
+        return str_replace('$Listing', $view, $content);
     }
 }
