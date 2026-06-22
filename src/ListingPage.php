@@ -464,14 +464,14 @@ class ListingPage extends \Page
             $items = $this->ComponentListingItems();
             $listingtemplate = $this->ComponentListingTemplate();
             $itemTemplate = $listingtemplate ? $listingtemplate->ItemTemplate : '';
-            if($itemTemplate) {
+            if ($itemTemplate) {
                 $view = $engine->renderString($itemTemplate, ViewLayerData::create(['Items' => $items]));
             }
         } else {
             $items = $this->ListingItems();
             $listingtemplate = $this->ListingTemplate();
             $itemTemplate = $listingtemplate ? $listingtemplate->ItemTemplate : '';
-            if($itemTemplate) {
+            if ($itemTemplate) {
                 $view = $engine->renderString($itemTemplate, ViewLayerData::create(['Items' => $items]));
             }
         }

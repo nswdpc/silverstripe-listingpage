@@ -24,7 +24,7 @@ class ListingPageController extends \PageController
         }
 
         $listingPage = $this->data();
-        if($listingPage instanceof ListingPage && ($listingPage->ContentType || $listingPage->CustomContentType)) {
+        if ($listingPage instanceof ListingPage && ($listingPage->ContentType || $listingPage->CustomContentType)) {
             // k, not doing it in the theme...
             $contentType = $listingPage->ContentType ?: $listingPage->CustomContentType;
             $this->response->addHeader('Content-type', $contentType);
