@@ -415,7 +415,7 @@ class ListingPage extends \Page
         if ($this->ComponentFilterWhere
             && ($componentWhereFilters = $this->ComponentFilterWhere->getValue())
         ) {
-            $result = $result->filter($componentWhereFilters);
+            return $result->filter($componentWhereFilters);
         }
 
         return $result;
