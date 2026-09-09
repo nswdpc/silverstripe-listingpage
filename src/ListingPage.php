@@ -2,10 +2,10 @@
 
 namespace Symbiote\ListingPage;
 
-use Page;
+use SilverStripe\Assets\Folder;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\ClassInfo;
-use SilverStripe\Forms\HTMLEditor\HtmlEditorField;
+use SilverStripe\Forms\HTMLEditor\HTMLEditorField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\NumericField;
 use SilverStripe\Forms\CheckboxField;
@@ -15,29 +15,51 @@ use SilverStripe\Forms\FormField;
 use Symbiote\MultiValueField\Fields\KeyValueField;
 use Symbiote\MultiValueField\ORM\FieldType\MultiValueField;
 use SilverStripe\Control\Controller;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\ArrayList;
-use SilverStripe\ORM\PaginatedList;
-use SilverStripe\View\SSViewer;
+use SilverStripe\Model\List\ArrayList;
+use SilverStripe\Model\List\PaginatedList;
+use SilverStripe\Model\List\SS_List;
+use SilverStripe\View\TemplateEngine;
+use SilverStripe\View\ViewLayerData;
 
 /**
  * A page that can be configured to create listings of other content
  *
  * @author  Marcus Nyeholt <marcus@silverstripe.com.au>
  * @license BSD License http://silverstripe.org/bsd-license/
+ * @property int $PerPage
+ * @property ?string $Style
+ * @property ?string $SortBy
+ * @property ?string $CustomSort
+ * @property ?string $SortDir
+ * @property ?string $ListType
+ * @property int $ListingSourceID
+ * @property int $Depth
+ * @property bool $StrictType
+ * @property bool $AllowDrilldown
+ * @property ?string $ContentType
+ * @property ?string $CustomContentType
+ * @property ?string $ComponentFilterName
+ * @property ?string $ComponentFilterColumn
+ * @property mixed $ComponentFilterWhere
+ * @property int $ListingTemplateID
+ * @property int $ComponentListingTemplateID
+ * @method \Symbiote\ListingPage\ListingTemplate ListingTemplate()
+ * @method \Symbiote\ListingPage\ListingTemplate ComponentListingTemplate()
  */
-class ListingPage extends Page
+class ListingPage extends \Page
 {
-    private static $table_name = 'ListingPage';
+    private static string $table_name = 'ListingPage';
 
-    private static $db = [
+    private static array $db = [
         'PerPage'                   => 'Int',
         'Style'                     => "Enum('Standard,A to Z')",
         'SortBy'                    => "Varchar(64)",
         'CustomSort'                => 'Varchar(64)',
         'SortDir'                   => "Enum('Ascending,Descending')",
-        'ListType'                  => 'DBClassName(\'' . DataObject::class . '\', [\'index\' => false])',
+        'ListType'                  => "DBClassName('" . DataObject::class . "', ['index' => false])",
         'ListingSourceID'           => 'Int',
         'Depth'                     => 'Int',
         'StrictType'                => 'Boolean',
@@ -52,70 +74,140 @@ class ListingPage extends Page
         'ComponentFilterWhere'      => MultiValueField::class
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'ListingTemplate'           => ListingTemplate::class,
         'ComponentListingTemplate'  => ListingTemplate::class,
     ];
 
-    private static $defaults = [
-        'ListType'                  => Page::class,
+    private static array $defaults = [
+        'ListType'                  => \Page::class,
         'PerPage'                   => 10
     ];
 
     /**
      * A mapping between ListType selected and the type of items that should be shown in the "Source"
      * selection tree. If not specified in this mapping, it is assumed to be 'Page'.
-     *
-     * @var array
      */
-    private static $listing_type_source_map = [
+    private static array $listing_type_source_map = [
         'Folder'    => Folder::class
     ];
 
-    private static $icon_class = 'font-icon-p-list';
+    private static string $cms_icon_class = 'font-icon-p-list';
 
+    #[\Override]
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
         /* @var FieldSet $fields */
 
+        // remove unused fields
+        $fields->removeByName(['Style']);
+
         $fields->replaceField('Content', HtmlEditorField::create('Content', _t('ListingPage.CONTENT', 'Content (enter $Listing to display the listing)')));
 
         $templates = DataObject::get(ListingTemplate::class);
-        if ($templates) {
-            $templates = $templates->map();
-        } else {
-            $templates = [];
-        }
+        $templates = $templates ? $templates->map() : [];
 
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('ListingTemplateID', _t('ListingPage.CONTENT_TEMPLATE', 'Listing Template'), $templates));
-        $fields->addFieldToTab('Root.ListingSettings', NumericField::create('PerPage', _t('ListingPage.PER_PAGE', 'Items Per Page')));
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('SortDir', _t('ListingPage.SORT_DIR', 'Sort Direction'), $this->dbObject('SortDir')->enumValues()));
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'ListingTemplateID',
+                _t('ListingPage.CONTENT_TEMPLATE', 'Listing Template'),
+                $templates
+            )->setEmptyString('(Select)')
+        );
 
-        $listType = $this->ListType ?: Page::class;
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            NumericField::create(
+                'PerPage',
+                _t('ListingPage.PER_PAGE', 'Items Per Page')
+            )
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'SortDir',
+                _t('ListingPage.SORT_DIR', 'Sort Direction'),
+                $this->dbObject('SortDir')->enumValues()
+            )
+        );
+
+        $listType = $this->ListType ?: \Page::class;
         $objFields = $this->getSelectableFields($listType);
 
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('SortBy', _t('ListingPage.SORT_BY', 'Sort By'), $objFields));
-        $fields->addFieldToTab('Root.ListingSettings', $custSort = TextField::create('CustomSort', _t('ListingPage.CUSTOM_SORT', 'Custom sort GET parameter name')));
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'SortBy',
+                _t('ListingPage.SORT_BY', 'Sort By'),
+                $objFields
+            )
+        );
 
-        $custSort->setRightTitle('If set, add this as a URL param to sort the view. Will also look for {name}_dir as the sort direction');
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            TextField::create(
+                'CustomSort',
+                _t('ListingPage.CUSTOM_SORT', 'Custom sort GET parameter name')
+            )->setRightTitle(
+                'If set, add this as a URL param to sort the view. Will also look for {name}_dir as the sort direction'
+            )
+        );
 
         $types = ClassInfo::subclassesFor(DataObject::class);
         array_shift($types);
         $source = array_combine($types, $types);
         asort($source);
 
-        $optionsetField = DropdownField::create('ListType', _t('ListingPage.PAGE_TYPE', 'List items of type'), $source, 'Any');
-        $fields->addFieldToTab('Root.ListingSettings', $optionsetField);
-        $fields->addFieldToTab('Root.ListingSettings', CheckboxField::create('StrictType', _t('ListingPage.STRICT_TYPE', 'List JUST this type, not descendents')));
+        $optionsetField = DropdownField::create(
+            'ListType',
+            _t('ListingPage.PAGE_TYPE', 'List items of type'),
+            $source
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            $optionsetField
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            CheckboxField::create(
+                'StrictType',
+                _t('ListingPage.STRICT_TYPE', 'List JUST this type, not descendents')
+            )
+        );
 
         $sourceType = $this->effectiveSourceType();
         $parentType = $this->parentType($sourceType);
         if ($sourceType && $parentType) {
-            $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('Depth', _t('ListingPage.DEPTH', 'Depth'), [1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5]));
-            $fields->addFieldToTab('Root.ListingSettings', TreeDropdownField::create('ListingSourceID', _t('ListingPage.LISTING_SOURCE', 'Source of content for listing'), $parentType));
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                DropdownField::create(
+                    'Depth',
+                    _t('ListingPage.DEPTH', 'Depth'),
+                    [1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5]
+                )
+            );
 
-            $fields->addFieldToTab('Root.ListingSettings', CheckboxField::create('AllowDrilldown', _t('ListingPage.ALLOW_DRILLDOWN', 'Allow request action to provide substitute parent ID, eg /page-url/43')));
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                TreeDropdownField::create(
+                    'ListingSourceID',
+                    _t('ListingPage.LISTING_SOURCE', 'Source of content for listing'),
+                    $parentType
+                )
+            );
+
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                CheckboxField::create(
+                    'AllowDrilldown',
+                    _t('ListingPage.ALLOW_DRILLDOWN', 'Allow request action to provide substitute parent ID, eg /page-url/43')
+                )
+            );
         }
 
         $contentTypes = [
@@ -125,32 +217,68 @@ class ListingPage extends Page
             'application/rdf+xml; charset=utf-8'    => 'RDF (xml)',
             'application/atom+xml; charset=utf-8'   => 'ATOM (xml)',
         ];
-        $fields->addFieldToTab('Root.ListingSettings', DropdownField::create('ContentType', _t('ListingPage.CONTENT_TYPE', 'Content Type'), $contentTypes)->setHasEmptyDefault(1)->setEmptyString('In Theme'));
-        $fields->addFieldToTab('Root.ListingSettings', TextField::create('CustomContentType', _t('ListingPage.CUSTOM_CONTENT_TYPE', 'Custom Content Type')));
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            DropdownField::create(
+                'ContentType',
+                _t('ListingPage.CONTENT_TYPE', 'Content Type'),
+                $contentTypes
+            )->setEmptyString('In Theme')
+        );
+
+        $fields->addFieldToTab(
+            'Root.ListingSettings',
+            TextField::create(
+                'CustomContentType',
+                _t('ListingPage.CUSTOM_CONTENT_TYPE', 'Custom Content Type')
+            )
+        );
 
         if ($this->ListType) {
             $componentsManyMany = singleton($this->ListType)->config()->many_many;
             if (!is_array($componentsManyMany)) {
                 $componentsManyMany = [];
             }
+
             $componentNames = [];
             foreach ($componentsManyMany as $componentName => $componentVal) {
                 $componentClass = '';
                 if (is_string($componentVal)) {
-                    $componentClass = " ($componentVal)";
+                    $componentClass = " ({$componentVal})";
                 } elseif (is_array($componentVal) && isset($componentVal['through'])) {
                     $componentClass = " ({$componentVal['through']})";
                 }
+
                 $componentNames[$componentName] = FormField::name_to_label($componentName) . $componentClass;
             }
+
             $fields->addFieldToTab(
                 'Root.ListingSettings',
-                DropdownField::create('ComponentFilterName', _t('ListingPage.RELATION_COMPONENT_NAME', 'Filter by Relation'), $componentNames)
-                ->setEmptyString('(Select)')
+                DropdownField::create(
+                    'ComponentFilterName',
+                    _t('ListingPage.RELATION_COMPONENT_NAME', 'Filter by Relation'),
+                    $componentNames
+                )->setEmptyString('(Select)')
                 ->setDescription('Will cause this page to list items based on the last URL part. (ie. ' . $this->AbsoluteLink() . '{$componentFieldName})')
             );
-            $fields->addFieldToTab('Root.ListingSettings', $componentColumnField = DropdownField::create('ComponentFilterColumn', 'Filter by Relation Field')->setEmptyString('(Must select a relation and save)'));
-            $fields->addFieldToTab('Root.ListingSettings', $componentListingField = DropdownField::create('ComponentListingTemplateID', _t('ListingPage.COMPONENT_CONTENT_TEMPLATE', 'Relation Listing Template'))->setEmptyString('(Must select a relation and save)'));
+
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                $componentColumnField = DropdownField::create(
+                    'ComponentFilterColumn',
+                    'Filter by Relation Field'
+                )->setEmptyString('(Must select a relation and save)')
+            );
+            $fields->addFieldToTab(
+                'Root.ListingSettings',
+                $componentListingField = DropdownField::create(
+                    'ComponentListingTemplateID',
+                    _t('ListingPage.COMPONENT_CONTENT_TEMPLATE', 'Relation Listing Template')
+                )->setEmptyString('(Must select a relation and save)')
+            );
+            $fields->removeByName(['ComponentFilterWhere']);
+
             if ($this->ComponentFilterName) {
                 $componentClass = $componentsManyMany[$this->ComponentFilterName] ?? '';
                 if ($componentClass) {
@@ -158,19 +286,21 @@ class ListingPage extends Page
                     foreach ($this->getSelectableFields($componentClass) as $columnName => $type) {
                         $componentFields[$columnName] = $columnName;
                     }
+
                     $componentColumnField->setSource($componentFields);
                     $componentColumnField->setEmptyString('(Select)');
 
                     $componentListingField->setSource($templates);
                     $componentListingField->setHasEmptyDefault(false);
 
-                    if (class_exists('KeyValueField')) {
-                        $fields->addFieldToTab(
-                            'Root.ListingSettings',
-                            KeyValueField::create('ComponentFilterWhere', 'Constrain Relation By', $componentFields)
-                                ->setRightTitle("Filter '{$this->ComponentFilterName}' with these properties.")
-                        );
-                    }
+                    $fields->insertAfter(
+                        'ComponentFilterName',
+                        KeyValueField::create(
+                            'ComponentFilterWhere',
+                            'Constrain Relation By',
+                            $componentFields
+                        )->setRightTitle("Filter '{$this->ComponentFilterName}' with these properties.")
+                    );
                 }
             }
         }
@@ -198,6 +328,7 @@ class ListingPage extends Page
      * When saving, check to see whether we should delete the
      * listing source ID
      */
+    #[\Override]
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
@@ -208,10 +339,8 @@ class ListingPage extends Page
 
     /**
      * Some subclasses will want to override this.
-     *
-     * @return DataObject
      */
-    protected function getListingSource()
+    protected function getListingSource(): ?DataObject
     {
         $sourceType = $this->effectiveSourceType();
         if ($sourceType && $this->ListingSourceID) {
@@ -222,27 +351,27 @@ class ListingPage extends Page
 
             $newParentId = 0;
             if ($this->AllowDrilldown) {
-                $newParentId = Controller::has_curr() ? (int) Controller::curr()->getRequest()->param('Action') : 0;
+                $controller = Controller::curr();
+                $newParentId = $controller ? (int) $controller->getRequest()->param('Action') : 0;
             }
 
-            if ($newParentId) {
-                /* @var $source DataObject */
-                if ($source) {
-                    $newParent = $sourceType::get()->byId($newParentId);
-                    if ($newParent) {
-                        // figure out whether it's within the source already configured there by looking up through the
-                        // tree until we find the listing source ID parent, at which point we can
-                        // safely swap to it
-                        //
-                        // - nyeholt 2017-12-18
-                        $parentCheck = $newParent;
-                        while ($parentCheck) {
-                            if ($parentCheck->ID == $source->ID) {
-                                $source = $newParent;
-                                break;
-                            }
-                            $parentCheck = $parentCheck->Parent();
+            /* @var $source DataObject */
+            if ($newParentId && $source) {
+                $newParent = $sourceType::get()->byId($newParentId);
+                if ($newParent) {
+                    // figure out whether it's within the source already configured there by looking up through the
+                    // tree until we find the listing source ID parent, at which point we can
+                    // safely swap to it
+                    //
+                    // - nyeholt 2017-12-18
+                    $parentCheck = $newParent;
+                    while ($parentCheck) {
+                        if ($parentCheck->ID == $source->ID) {
+                            $source = $newParent;
+                            break;
                         }
+
+                        $parentCheck = $parentCheck->Parent();
                     }
                 }
             }
@@ -251,6 +380,8 @@ class ListingPage extends Page
                 return $source;
             }
         }
+
+        return null;
     }
 
     /**
@@ -262,9 +393,9 @@ class ListingPage extends Page
      */
     protected function effectiveSourceType()
     {
-        $listType = $this->ListType ?: Page::class;
-        $listType = $this->config()->listing_type_source_map[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
-        return $listType;
+        $listType = $this->ListType ?: \Page::class;
+        $listTypeSourceMap = $this->config()->get('listing_type_source_map');
+        return $listTypeSourceMap[$listType] ?? DataObject::getSchema()->baseDataClass($listType);
     }
 
     /**
@@ -277,14 +408,16 @@ class ListingPage extends Page
         $manyMany = singleton($this->ListType)->config()->many_many;
         $tagClass = $manyMany[$this->ComponentFilterName] ?? '';
         if (!$tagClass) {
-            return new ArrayList();
+            return ArrayList::create();
         }
+
         $result = DataList::create($tagClass);
         if ($this->ComponentFilterWhere
             && ($componentWhereFilters = $this->ComponentFilterWhere->getValue())
         ) {
-            $result = $result->filter($componentWhereFilters);
+            return $result->filter($componentWhereFilters);
         }
+
         return $result;
     }
 
@@ -304,7 +437,7 @@ class ListingPage extends Page
 
         $objFields = $this->getSelectableFields($listType);
 
-        if ($source) {
+        if ($source instanceof \SilverStripe\ORM\DataObject) {
             $ids = $this->getIdsFrom($source, 1);
             $ids[] = $source->ID;
 
@@ -319,7 +452,8 @@ class ListingPage extends Page
 
         $sortDir = $this->SortDir == 'Ascending' ? 'ASC' : 'DESC';
         $sort = $this->SortBy && isset($objFields[$this->SortBy]) ? $this->SortBy : 'Title';
-        $req = Controller::has_curr() ? Controller::curr()->getRequest() : null;
+        $controller = Controller::curr();
+        $req = $controller ? $controller->getRequest() : null;
 
         if (strlen($this->CustomSort ?? '') && $req) {
             $sortField = $req->getVar($this->CustomSort);
@@ -342,8 +476,6 @@ class ListingPage extends Page
         // $sort = $this->CustomSort ? $this->CustomSort : $sort;
         $sort .= ' ' . $sortDir;
 
-        $limit = '';
-
         $pageUrlVar = 'page' . $this->ID;
 
         $items = DataList::create($listType)->filter($filter)->sort($sort);
@@ -352,8 +484,9 @@ class ListingPage extends Page
             $page = isset($_REQUEST[$pageUrlVar]) ? (int) $_REQUEST[$pageUrlVar] : 0;
             $items  = $items->limit($this->PerPage, $page);
         }
+
         if ($this->ComponentFilterName) {
-            $controller = (Controller::has_curr()) ? Controller::curr() : null;
+            $controller = Controller::curr();
             $tags = [];
             if ($controller && $controller instanceof ListingPageController) {
                 $tagName = urldecode((string) $controller->getRequest()->latestParam('Action'));
@@ -377,21 +510,21 @@ class ListingPage extends Page
                     $this->ComponentFilterName . '.ID' => $tags
                 ]);
             } else {
-                $tags = new ArrayList();
+                $tags = ArrayList::create();
             }
         }
 
         $this->extend('updateListingItems', $items);
 
         $newList = ArrayList::create();
+        // @phpstan-ignore if.alwaysTrue
         if ($items) {
             $newList = PaginatedList::create($items);
             // ensure the 0 limit is applied if configured as such
             $newList->setPageLength($this->PerPage);
             $newList->setPaginationGetVar($pageUrlVar);
-            if ($items instanceof DataList) {
-                $newList->setPaginationFromQuery($items->dataQuery()->query());
-            }
+            // @phpstan-ignore instanceof.alwaysTrue
+            $newList->setPaginationFromQuery($items->dataQuery()->query());
         }
 
         return $newList;
@@ -403,40 +536,56 @@ class ListingPage extends Page
      * @param DataObject $parent
      * @param int        $depth
      */
-    protected function getIdsFrom($parent, $depth)
+    protected function getIdsFrom($parent, $depth): ?array
     {
         if ($depth >= $this->Depth) {
-            return;
+            return null;
         }
+
         $ids = [];
-        foreach ($parent->Children() as $kid) {
-            $ids[] = $kid->ID;
-            $childIds = $this->getIdsFrom($kid, $depth + 1);
-            if ($childIds) {
-                $ids = array_merge($ids, $childIds);
+        // @phpstan-ignore method.notFound
+        if ($children = $parent->Children()) {
+            foreach ($children as $kid) {
+                $ids[] = $kid->ID;
+                $childIds = $this->getIdsFrom($kid, $depth + 1);
+                if ($childIds) {
+                    $ids = array_merge($ids, $childIds);
+                }
             }
         }
+
         return $ids;
     }
 
-    public function Content()
+    public function Content(): string
     {
         if (!$this->ID) {
             return '';
         }
-        $action = (Controller::has_curr()) ? Controller::curr()->getRequest()->latestParam('Action') : null;
 
+        $controller = Controller::curr();
+        $action = ($controller ? $controller->getRequest()->latestParam('Action') : null);
+
+        $engine = Injector::inst()->create(TemplateEngine::class);
+        $view = '';
         if ($this->ComponentFilterName && !$action) {
             // For a list of relations like tags/categories/etc
             $items = $this->ComponentListingItems();
-            $item = $this->customise(['Items' => $items]);
-            $view = SSViewer::fromString($this->ComponentListingTemplate()->ItemTemplate);
+            $listingtemplate = $this->ComponentListingTemplate();
+            $itemTemplate = $listingtemplate ? $listingtemplate->ItemTemplate : '';
+            if ($itemTemplate) {
+                $view = $engine->renderString($itemTemplate, ViewLayerData::create(['Items' => $items]));
+            }
         } else {
             $items = $this->ListingItems();
-            $item = $this->customise(['Items' => $items]);
-            $view = SSViewer::fromString($this->ListingTemplate()->ItemTemplate);
+            $listingtemplate = $this->ListingTemplate();
+            $itemTemplate = $listingtemplate ? $listingtemplate->ItemTemplate : '';
+            if ($itemTemplate) {
+                $view = $engine->renderString($itemTemplate, ViewLayerData::create(['Items' => $items]));
+            }
         }
+
         $content = str_replace('<p>$Listing</p>', '$Listing', $this->Content);
-        return str_replace('$Listing', $view->process($item), $content);
+        return str_replace('$Listing', $view, $content);
     }
 }

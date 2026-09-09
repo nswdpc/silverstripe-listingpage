@@ -1,23 +1,32 @@
-# Listing Page Module
-
-[![Build Status](https://travis-ci.org/nyeholt/silverstripe-listingpage.svg?branch=master)](https://travis-ci.org/nyeholt/silverstripe-listingpage)
+# Listing Page for Silverstripe
 
 A module that allows CMS users to create templated listing pages.
 
-## Composer Install
+## Install
 
+```sh
+composer require symbiote/silverstripe-listingpage:dev-ss6
 ```
-composer require symbiote/silverstripe-listingpage: ^2.0
+
+> This fork requires a repository entry:
+
+```json
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "https://github.com/nswdpc/silverstripe-listingpage.git"
+    }
+]
 ```
-
-## Requirements
-
-* SilverStripe ^4 || ^5
-* MultiValueField
 
 ## Documentation
 
-* [Quick Start](docs/en/quick-start.md)
-* [Advanced Usage](docs/en/advanced-usage.md)
+* [Quick Start](docs/en/001_index.md)
+* [Advanced Usage](docs/en/001_advanced-usage.md)
+
+## License
+
 * [License](LICENSE.md)
+
+## Contributing
 * [Contributing](CONTRIBUTING.md)

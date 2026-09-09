@@ -2,13 +2,9 @@
 
 namespace Symbiote\ListingPage\Tests;
 
-use Page;
 use Symbiote\ListingPage\ListingTemplate;
 use Symbiote\ListingPage\ListingPage;
 use Symbiote\Multisites\Multisites;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\DB;
 use SilverStripe\Security\Permission;
 use SilverStripe\Dev\FunctionalTest;
 
@@ -29,7 +25,7 @@ class FilterByRelationTest extends FunctionalTest
      * https://github.com/nyeholt/silverstripe-listingpage/issues/19
      *
      */
-    public function testFilterByRelation()
+    public function testFilterByRelation(): void
     {
         $this->logInWithPermission('ADMIN');
 
@@ -68,7 +64,7 @@ HTML;
         $record->ListingSourceID = $parentId; // List everything under 'Site' / root
         $record->SortBy   = 'Title';
         $record->SortDir  = 'Ascending';
-        $record->ListType = Page::class;
+        $record->ListType = \Page::class;
         $record->ListingTemplateID = $templateRecord->ID;
         $record->ComponentListingTemplateID = $templateRecord->ID;
         $record->ComponentFilterName = 'ViewerGroups'; // Magic method on SiteTree, from "InheritedPermissionsExtension" many_many.
@@ -79,7 +75,8 @@ HTML;
 
         $response = $this->get('listingpage-relation-test');
         $this->assertEquals('200', $response->getStatusCode(), 'Expected "listingpage-relation-test" to get 200 OK');
-        $response = $this->get('listingpage-relation-test/' . $adminGroups[0]->Code, 'Expected "listingpage-relation-test/' . $adminGroups[0]->Code . '" to get 200 OK');
+        $response = $this->get('listingpage-relation-test/' . $adminGroups[0]->Code);
+        // 'Expected "listingpage-relation-test/' . $adminGroups[0]->Code . '" to get 200 OK');
         $this->assertEquals('200', $response->getStatusCode());
         $expectedValue = <<<HTML
 <div class="listing-page-template">
@@ -99,8 +96,8 @@ HTML;
     /**
      * Taken from "framework\tests\view\SSViewerTest.php"
      */
-    protected function assertEqualIgnoringWhitespace($a, $b, $message = '')
+    protected function assertEqualIgnoringWhitespace($a, $b, string $message = '')
     {
-        $this->assertEquals(preg_replace('/\s+/', '', $a), preg_replace('/\s+/', '', $b), $message);
+        $this->assertEquals(preg_replace('/\s+/', '', (string) $a), preg_replace('/\s+/', '', (string) $b), $message);
     }
 }

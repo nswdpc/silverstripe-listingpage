@@ -2,33 +2,35 @@
 
 namespace Symbiote\ListingPage\Tests;
 
-use Page;
 use DNADesign\Elemental\Tests\Src\TestPage;
 use Symbiote\Multisites\Multisites;
 use Symbiote\ListingPage\ListingPage;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DB;
 
 class ListingPageTest extends SapphireTest
 {
+    protected $usesDatabase = true;
+
     /**
      * The elemental extension may be applied, meaning we need to ensure this is loaded.
      *
      * @return array
      */
+    #[\Override]
     public static function getExtraDataObjects()
     {
         $objects = static::$extra_dataobjects;
         if (class_exists(TestPage::class)) {
             $objects[] = TestPage::class;
         }
+
         return $objects;
     }
 
-    public function testPublish()
+    public function testPublish(): void
     {
         $this->logInWithPermission('ADMIN');
 
@@ -45,11 +47,11 @@ class ListingPageTest extends SapphireTest
         $this->assertTrue($record->publishRecursive());
         $this->assertEquals(
             'Listing Page Test',
-            DB::query("SELECT \"Title\" FROM \"SiteTree_Live\" WHERE \"ID\" = '$record->ID'")->value()
+            DB::prepared_query('SELECT "Title" FROM "SiteTree_Live" WHERE "ID" = ?', [$record->ID])->value()
         );
     }
 
-    public function testCustomisedSort()
+    public function testCustomisedSort(): void
     {
         $this->logInWithPermission('ADMIN');
 
@@ -69,12 +71,12 @@ class ListingPageTest extends SapphireTest
         $record->CustomSort      = 'sort';
         $record->write();
 
-        $items = $record->ListingItems();
+        $record->ListingItems();
 
         $this->assertEquals('Title', $record->CurrentSort);
         $this->assertEquals('ASC', $record->CurrentDir);
 
-        $controller = new Controller;
+        $controller = Controller::create();
 
         $params = [
             'sort' => 'ID',
@@ -83,9 +85,11 @@ class ListingPageTest extends SapphireTest
 
         $req   = new HTTPRequest('GET', 'dummy/url', $params);
         $req->setSession(Controller::curr()->getRequest()->getSession());
+
         $controller->setRequest($req);
         $controller->pushCurrent();
-        $items = $record->ListingItems();
+
+        $record->ListingItems();
 
         $this->assertEquals('ID', $record->CurrentSort);
         $this->assertEquals('DESC', $record->CurrentDir);

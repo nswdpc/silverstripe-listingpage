@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Symbiote\ListingPage;
 
 use SilverStripe\Admin\ModelAdmin;
-use Symbiote\ListingPage\ListingTemplate;
 
 /**
  * Description of ListingAdmin
@@ -13,13 +14,13 @@ use Symbiote\ListingPage\ListingTemplate;
  */
 class ListingAdmin extends ModelAdmin
 {
-    private static $menu_title = 'Listings';
+    private static string $menu_title = 'Listings';
 
-    private static $url_segment = 'listing';
+    private static string $url_segment = 'listing';
 
-    private static $managed_models = [
+    private static array $managed_models = [
         ListingTemplate::class
     ];
 
-    private static $menu_icon_class = 'font-icon-p-list';
+    private static string $menu_icon_class = 'font-icon-p-list';
 }
